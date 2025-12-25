@@ -10,6 +10,7 @@
         body {
             font-family: 'Assistant', sans-serif;
             background-color: #f0f9ff;
+            text-align: right;
         }
         .english-text {
             font-family: 'Fredoka One', cursive;
@@ -19,6 +20,10 @@
         .ltr-container {
             direction: ltr;
             text-align: left;
+        }
+        .rtl-container {
+            direction: rtl;
+            text-align: right;
         }
         .selectable-sentence {
             cursor: pointer;
@@ -43,7 +48,6 @@
             filter: brightness(1.1);
             transform: translateY(-2px);
         }
-        /* Style for locked game */
         .locked-overlay {
             background: rgba(255, 255, 255, 0.9);
             display: flex;
@@ -79,7 +83,7 @@
                 <div class="mb-8 p-4 bg-purple-50 rounded-xl">
                     <h3 class="font-bold text-purple-800 mb-2 text-lg">✨ צריכים עוד דוגמאות? (Gemini AI)</h3>
                     <div class="flex gap-2">
-                        <input type="text" id="ai-topic" placeholder="נושא (למשל: בגינה, במסיבה...)" class="flex-1 p-2 border rounded-lg">
+                        <input type="text" id="ai-topic" placeholder="נושא (למשל: בגינה, במסיבה...)" class="flex-1 p-2 border rounded-lg text-right">
                         <button onclick="generateAISentences()" id="gen-btn" class="sparkle-button px-4 py-2 rounded-lg font-bold">צור משפטים ✨</button>
                     </div>
                     <div id="ai-examples" class="mt-4 space-y-2 ltr-container text-blue-700"></div>
@@ -89,15 +93,15 @@
                     <div class="bg-green-50 p-6 rounded-2xl border-2 border-green-200">
                         <h3 class="font-bold text-green-700 text-xl mb-3">חיובי (Do):</h3>
                         <ul id="positive-list" class="space-y-4 ltr-container">
-                            <li class="flex items-center gap-2"><span class="english-text text-xl text-blue-600">Open</span> the door. <button onclick="speakText('Open the door')" class="text-sm">🔊</button></li>
-                            <li class="flex items-center gap-2"><span class="english-text text-xl text-blue-600">Stand</span> up, please. <button onclick="speakText('Stand up, please')" class="text-sm">🔊</button></li>
+                            <li class="flex items-center gap-2"><button onclick="speakText('Open the door')" class="text-sm">🔊</button><span class="english-text text-xl text-blue-600">Open</span> the door.</li>
+                            <li class="flex items-center gap-2"><button onclick="speakText('Stand up, please')" class="text-sm">🔊</button><span class="english-text text-xl text-blue-600">Stand</span> up, please.</li>
                         </ul>
                     </div>
                     <div class="bg-red-50 p-6 rounded-2xl border-2 border-red-200">
                         <h3 class="font-bold text-red-700 text-xl mb-3">שלילי (Don't):</h3>
                         <ul class="space-y-4 ltr-container">
-                            <li class="flex items-center gap-2"><span class="english-text text-xl text-red-600">Don't run</span> in class. <button onclick="speakText('Don\'t run in class')" class="text-sm">🔊</button></li>
-                            <li class="flex items-center gap-2"><span class="english-text text-xl text-red-600">Don't be</span> late. <button onclick="speakText('Don\'t be late')" class="text-sm">🔊</button></li>
+                            <li class="flex items-center gap-2"><button onclick="speakText('Don\'t run in class')" class="text-sm">🔊</button><span class="english-text text-xl text-red-600">Don't run</span> in class.</li>
+                            <li class="flex items-center gap-2"><button onclick="speakText('Don\'t be late')" class="text-sm">🔊</button><span class="english-text text-xl text-red-600">Don't be</span> late.</li>
                         </ul>
                     </div>
                 </div>
@@ -146,14 +150,12 @@
         const apiKey = ""; 
         let isGameUnlocked = false;
 
-        // --- Gemini API Helpers ---
         async function callGemini(prompt, systemPrompt = "") {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] }
             };
-
             let delay = 1000;
             for (let i = 0; i < 5; i++) {
                 try {
@@ -197,9 +199,9 @@
                 generationConfig: {
                     responseModalities: ["AUDIO"],
                     speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
-                }
+                },
+                model: "gemini-2.5-flash-preview-tts"
             };
-
             try {
                 const response = await fetch(url, { method: 'POST', body: JSON.stringify(payload) });
                 const data = await response.json();
@@ -223,7 +225,7 @@
             if(result) {
                 const lines = result.split('\n').filter(l => l.trim());
                 output.innerHTML = lines.map(line => `
-                    <div class="bg-white p-2 rounded shadow-sm flex justify-between items-center">
+                    <div class="bg-white p-2 rounded shadow-sm flex justify-between items-center ltr-container">
                         <span class="english-text">${line}</span>
                         <button onclick="speakText('${line.replace(/'/g, "\\'")}')" class="text-sm">🔊</button>
                     </div>`).join('');
@@ -236,14 +238,13 @@
             const userText = input.value.trim();
             if(!userText) return;
             const feedbackEl = document.createElement('div');
-            feedbackEl.className = "text-sm mt-1 text-blue-600 italic";
+            feedbackEl.className = "text-sm mt-1 text-blue-600 italic rtl-container";
             feedbackEl.innerText = "בודק בעזרת AI... ✨";
             input.after(feedbackEl);
             const feedback = await callGemini(`Change target: "${expected}". Student wrote: "${userText}". Correct? If no, explain why in Hebrew (1 sentence). If yes, say 'Correct!'.`, "English tutor role.");
             feedbackEl.innerText = feedback || "";
         }
 
-        // --- Navigation ---
         function showSection(sectionId) {
             document.querySelectorAll('.section-content').forEach(s => s.classList.add('hidden'));
             document.getElementById(sectionId + '-section').classList.remove('hidden');
@@ -252,9 +253,7 @@
                 b.classList.add('text-gray-600');
             });
             document.getElementById('tab-' + sectionId).classList.add('text-blue-600', 'border-blue-600');
-            
             if(sectionId === 'practice') loadPractice();
-            
             if(sectionId === 'game') {
                 if(isGameUnlocked) {
                     document.getElementById('game-locked').classList.add('hidden');
@@ -266,7 +265,6 @@
             }
         }
 
-        // --- Practice Data & Logic ---
         const quizData = {
             mc: [
                 { id: 0, q: "איזה משפט הוא ציווי?", options: ["I like dogs", "Eat your food", "He runs"], correct: 1 },
@@ -296,20 +294,20 @@
             if(container.innerHTML !== "") return;
             let h = "";
             quizData.mc.forEach((q, i) => {
-                h += `<div class="bg-blue-50 p-6 rounded-2xl border-r-4 border-blue-400 ltr-container">
-                    <p class="text-xl font-bold mb-2" dir="rtl">${i+1}. ${q.q}</p>
+                h += `<div class="bg-blue-50 p-6 rounded-2xl border-r-4 border-blue-400 rtl-container">
+                    <p class="text-xl font-bold mb-2">${i+1}. ${q.q}</p>
                     ${q.sentence ? `<p class="english-text text-xl mb-3">${q.sentence}</p>` : ''}
                     <div class="grid gap-2">${q.options.map((o, idx) => `<label class="bg-white p-2 rounded border cursor-pointer flex items-center gap-2"><input type="radio" name="q${q.id}" value="${idx}"> ${o}</label>`).join('')}</div>
                 </div>`;
             });
             const parts = quizData.id.text.split(/(\[.*?\])/);
-            h += `<div class="bg-purple-50 p-6 rounded-2xl border-r-4 border-purple-400 ltr-container">
-                <p class="text-xl font-bold mb-4" dir="rtl">9-12. ${quizData.id.q}</p>
-                <div class="bg-white p-4 rounded leading-loose">${parts.map(p => p.startsWith('[') ? `<span class="selectable-sentence english-text border-b-2 border-blue-200" onclick="this.classList.toggle('selected-sentence')">${p.slice(1,-1)}</span>` : p).join('')}</div>
+            h += `<div class="bg-purple-50 p-6 rounded-2xl border-r-4 border-purple-400 rtl-container">
+                <p class="text-xl font-bold mb-4">9-12. ${quizData.id.q}</p>
+                <div class="bg-white p-4 rounded leading-loose ltr-container text-left">${parts.map(p => p.startsWith('[') ? `<span class="selectable-sentence english-text border-b-2 border-blue-200" onclick="this.classList.toggle('selected-sentence')">${p.slice(1,-1)}</span>` : p).join('')}</div>
             </div>`;
             quizData.tr.forEach((q, i) => {
-                h += `<div class="bg-green-50 p-6 rounded-2xl border-r-4 border-green-400 ltr-container">
-                    <p class="text-xl font-bold mb-2" dir="rtl">${i+13}. ${q.q}</p>
+                h += `<div class="bg-green-50 p-6 rounded-2xl border-r-4 border-green-400 rtl-container">
+                    <p class="text-xl font-bold mb-2">${i+13}. <span class="english-text">${q.q}</span></p>
                     <div class="flex gap-2">
                         <input type="text" id="tr-${q.id}" class="flex-1 p-2 border rounded ltr-container english-text" placeholder="Type imperative here...">
                         <button onclick="checkWithAI('tr-${q.id}', '${q.ans}')" class="sparkle-button px-3 py-1 rounded-lg text-sm">בדוק ✨</button>
@@ -331,11 +329,9 @@
             quizData.tr.forEach(q => {
                 if(document.getElementById(`tr-${q.id}`).value.trim().toLowerCase().includes(q.ans)) score += 5;
             });
-            
             const sDiv = document.getElementById('practice-score');
             sDiv.innerText = `ניקוד: ${score}/100`;
             sDiv.classList.remove('hidden');
-
             if(score >= 60) {
                 isGameUnlocked = true;
                 document.getElementById('unlock-msg').classList.remove('hidden');
@@ -347,7 +343,6 @@
             }
         }
 
-        // --- Simon Says Game ---
         let gameActive = false, points = 0, currentCmd = "", isSimon = false, timer = null;
         const cmds = [{n: "Jump", e: "🏃"}, {n: "Clap", e: "👏"}, {n: "Sit", e: "🪑"}, {n: "Dance", e: "💃"}];
         function startGame() {
